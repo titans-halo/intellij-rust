@@ -40,7 +40,7 @@ import javax.swing.JCheckBox
 import javax.swing.JComponent
 
 class CargoCommandConfigurationEditor(project: Project)
-    : RsCommandConfigurationEditor<CargoCommandConfiguration>(project) {
+    : RsCommandConfigurationEditor<CargoCommandConfiguration, RsCommandLineEditor>(project) {
 
     override val command = RsCommandLineEditor(
         project, CargoCommandCompletionProvider(project.cargoProjects) { currentWorkspace() }

@@ -13,6 +13,7 @@ import com.intellij.util.io.systemIndependentPath
 import com.intellij.util.messages.Topic
 import com.intellij.util.xmlb.annotations.Transient
 import org.jetbrains.annotations.TestOnly
+import org.rust.cargo.runconfig.rustfmt.RustfmtConfiguration
 import org.rust.cargo.toolchain.ExternalLinter
 import org.rust.cargo.toolchain.RsToolchain
 import org.rust.cargo.toolchain.RsToolchainBase
@@ -113,6 +114,8 @@ interface RustProjectSettingsService {
     val doctestInjectionEnabled: Boolean
     val useRustfmt: Boolean
     val runRustfmtOnSave: Boolean
+
+    val rustfmtConfiguration: RustfmtConfiguration
 
     @Suppress("DEPRECATION")
     @Deprecated("Use toolchain property")

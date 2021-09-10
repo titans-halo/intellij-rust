@@ -3,7 +3,7 @@
  * found in the LICENSE file.
  */
 
-package org.rust.cargo
+package org.rust.cargo.runconfig.rustfmt
 
 import com.intellij.execution.ExecutionException
 import com.intellij.openapi.components.Service
@@ -58,7 +58,7 @@ class RustfmtWatcher {
             val documentsToReformat = documentsToReformatLater.toList()
             documentsToReformatLater.clear()
 
-            for ((cargoProject, documents) in documentsToReformat.groupBy(::findCargoProject)) {
+            for ((cargoProject, documents) in documentsToReformat.groupBy(Companion::findCargoProject)) {
                 if (cargoProject == null) continue
 
                 if (DumbService.isDumb(cargoProject.project)) {

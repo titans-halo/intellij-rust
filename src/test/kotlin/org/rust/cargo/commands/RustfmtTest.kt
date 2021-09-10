@@ -6,6 +6,7 @@
 package org.rust.cargo.commands
 
 import com.intellij.codeInsight.actions.ReformatCodeProcessor
+import com.intellij.execution.ExecutionException
 import com.intellij.openapi.actionSystem.CommonDataKeys
 import com.intellij.openapi.command.WriteCommandAction
 import com.intellij.openapi.editor.Editor
@@ -17,6 +18,7 @@ import org.intellij.lang.annotations.Language
 import org.rust.FileTreeBuilder
 import org.rust.cargo.RsWithToolchainTestBase
 import org.rust.cargo.project.settings.rustSettings
+import org.rust.cargo.toolchain.RustChannel
 import org.rust.fileTree
 import org.rust.ide.formatter.RustfmtTestmarks
 import org.rust.launchAction
@@ -99,6 +101,62 @@ class RustfmtTest : RsWithToolchainTestBase() {
         }
     """) { reformatFile(myFixture.editor) }
 
+    fun `test rustfmt file action with edited configuration 1`() = doTest({
+        toml("Cargo.toml", """
+            [package]
+            name = "hello"
+            version = "0.1.0"
+            authors = []
+        """)
+
+        dir("src") {
+            rust("main.rs", """
+                fn main() {/*caret*/
+                println!("Hello, ΣΠ∫!");
+                }
+            """)
+        }
+    }, """
+        fn main() {
+            println!("Hello, ΣΠ∫!");
+        }
+    """) {
+        project.rustSettings.rustfmtConfiguration.apply {
+            command = "--unstable-features"
+            channel = RustChannel.NIGHTLY
+        }
+        reformatFile(myFixture.editor)
+    }
+
+    fun `test rustfmt file action with edited configuration 2`() = doTest({
+        toml("Cargo.toml", """
+            [package]
+            name = "hello"
+            version = "0.1.0"
+            authors = []
+        """)
+
+        dir("src") {
+            rust("main.rs", """
+                fn main() {/*caret*/
+                println!("Hello, ΣΠ∫!");
+                }
+            """)
+        }
+    }, """
+        fn main() {
+        println!("Hello, ΣΠ∫!");
+        }
+    """) {
+        project.rustSettings.rustfmtConfiguration.apply {
+            command = "--unstable-features"
+            channel = RustChannel.STABLE
+        }
+        assertThrows(ExecutionException::class.java) {
+            reformatFile(myFixture.editor)
+        }
+    }
+
     fun `test rustfmt file action edition 2018`() = doTest({
         toml("Cargo.toml", """
             [package]
@@ -141,6 +199,62 @@ class RustfmtTest : RsWithToolchainTestBase() {
             println!("Hello, ΣΠ∫!");
         }
     """) { reformatCargoProject() }
+
+    fun `test rustfmt cargo project action with edited configuration 1`() = doTest({
+        toml("Cargo.toml", """
+            [package]
+            name = "hello"
+            version = "0.1.0"
+            authors = []
+        """)
+
+        dir("src") {
+            rust("main.rs", """
+                fn main() {/*caret*/
+                    println!("Hello, ΣΠ∫!");
+                }
+            """)
+        }
+    }, """
+        fn main() {
+            println!("Hello, ΣΠ∫!");
+        }
+    """) {
+        project.rustSettings.rustfmtConfiguration.apply {
+            command = "--unstable-features"
+            channel = RustChannel.NIGHTLY
+        }
+        reformatCargoProject()
+    }
+
+    fun `test rustfmt cargo project action with edited configuration 2`() = doTest({
+        toml("Cargo.toml", """
+            [package]
+            name = "hello"
+            version = "0.1.0"
+            authors = []
+        """)
+
+        dir("src") {
+            rust("main.rs", """
+                fn main() {/*caret*/
+                    println!("Hello, ΣΠ∫!");
+                }
+            """)
+        }
+    }, """
+        fn main() {
+            println!("Hello, ΣΠ∫!");
+        }
+    """) {
+        project.rustSettings.rustfmtConfiguration.apply {
+            command = "--unstable-features"
+            channel = RustChannel.STABLE
+        }
+        assertThrows(ExecutionException::class.java) {
+            reformatCargoProject()
+        }
+    }
 
     fun `test rustfmt on save`() = doTest({
         toml("Cargo.toml", """

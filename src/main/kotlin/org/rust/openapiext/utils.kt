@@ -46,7 +46,7 @@ import com.intellij.psi.util.CachedValueProvider
 import com.intellij.util.CachedValueImpl
 import org.jdom.Element
 import org.jdom.input.SAXBuilder
-import org.rust.cargo.RustfmtWatcher
+import org.rust.cargo.runconfig.rustfmt.RustfmtWatcher
 import org.rust.ide.annotator.RsExternalLinterPass
 import java.lang.reflect.Field
 import java.nio.file.Path

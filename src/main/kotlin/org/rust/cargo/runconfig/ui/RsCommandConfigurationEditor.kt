@@ -11,19 +11,19 @@ import com.intellij.openapi.options.SettingsEditor
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.ui.LabeledComponent
 import com.intellij.openapi.ui.TextFieldWithBrowseButton
+import com.intellij.ui.TextAccessor
 import com.intellij.util.text.nullize
 import org.rust.cargo.project.workspace.CargoWorkspace
 import org.rust.cargo.runconfig.RsCommandConfiguration
 import org.rust.cargo.runconfig.command.CargoCommandConfiguration
-import org.rust.cargo.util.RsCommandLineEditor
 import java.nio.file.Path
 import java.nio.file.Paths
+import javax.swing.JComponent
 
-abstract class RsCommandConfigurationEditor<T : RsCommandConfiguration>(
-    protected val project: Project
-) : SettingsEditor<T>() {
+abstract class RsCommandConfigurationEditor<T, C>(protected val project: Project) : SettingsEditor<T>()
+    where T : RsCommandConfiguration, C : TextAccessor, C : JComponent {
 
-    abstract val command: RsCommandLineEditor
+    abstract val command: C
 
     protected fun currentWorkspace(): CargoWorkspace? =
         CargoCommandConfiguration.findCargoProject(project, command.text, currentWorkingDirectory)?.workspace

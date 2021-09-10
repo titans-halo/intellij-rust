@@ -23,6 +23,8 @@ import org.rust.cargo.project.configurable.RsProjectConfigurable
 import org.rust.cargo.project.settings.RustProjectSettingsService
 import org.rust.cargo.project.settings.RustProjectSettingsService.*
 import org.rust.cargo.project.settings.RustProjectSettingsService.Companion.RUST_SETTINGS_TOPIC
+import org.rust.cargo.runconfig.rustfmt.RustfmtConfiguration
+import org.rust.cargo.runconfig.rustfmt.RustfmtConfigurationType
 import org.rust.cargo.toolchain.ExternalLinter
 import org.rust.cargo.toolchain.RsToolchain
 import org.rust.cargo.toolchain.RsToolchainBase
@@ -66,12 +68,15 @@ class RustProjectSettingsServiceImpl(
     override val useRustfmt: Boolean get() = _state.useRustfmt
     override val runRustfmtOnSave: Boolean get() = _state.runRustfmtOnSave
 
+    override val rustfmtConfiguration: RustfmtConfiguration = RustfmtConfigurationType.factory.createTemplateConfiguration(project)
+
     @Suppress("OverridingDeprecatedMember", "DEPRECATION")
     override fun getToolchain(): RsToolchain? = _state.toolchain?.let(RsToolchain::from)
 
     override fun getState(): Element {
         val element = Element(serviceName)
         serializeObjectInto(_state, element)
+        rustfmtConfiguration.writeExternal(element)
         return element
     }
 
@@ -79,6 +84,7 @@ class RustProjectSettingsServiceImpl(
         val rawState = element.clone()
         rawState.updateToCurrentVersion()
         deserializeInto(_state, rawState)
+        rustfmtConfiguration.readExternal(element)
     }
 
     override fun modify(action: (State) -> Unit) {

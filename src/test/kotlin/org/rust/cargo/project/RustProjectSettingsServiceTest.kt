@@ -37,6 +37,9 @@ class RustProjectSettingsServiceTest : LightPlatformTestCase() {
               <option name="useOffline" value="true" />
               <option name="useRustfmt" value="true" />
               <option name="version" value="2" />
+              <option name="command" value="" />
+              <option name="channel" value="DEFAULT" />
+              <envs />
             </RustProjectSettings>
         """.trimIndent()
         service.loadState(elementFromXmlString(text))
@@ -69,6 +72,9 @@ class RustProjectSettingsServiceTest : LightPlatformTestCase() {
               <option name="compileAllTargets" value="false" />
               <option name="useCargoCheckAnnotator" value="true" />
               <option name="expandMacros" value="false" />
+              <option name="command" value="" />
+              <option name="channel" value="DEFAULT" />
+              <envs />
             </RustProjectSettings>
         """.trimIndent()
         service.loadState(elementFromXmlString(text))
@@ -80,6 +86,9 @@ class RustProjectSettingsServiceTest : LightPlatformTestCase() {
               <option name="macroExpansionEngine" value="DISABLED" />
               <option name="runExternalLinterOnTheFly" value="true" />
               <option name="version" value="2" />
+              <option name="command" value="" />
+              <option name="channel" value="DEFAULT" />
+              <envs />
             </RustProjectSettings>
         """.trimIndent()
         val actual = service.state.toXmlString()

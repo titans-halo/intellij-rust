@@ -14,7 +14,7 @@ import org.rust.cargo.util.RsCommandLineEditor
 import javax.swing.JComponent
 
 class WasmPackCommandConfigurationEditor(project: Project)
-    : RsCommandConfigurationEditor<WasmPackCommandConfiguration>(project) {
+    : RsCommandConfigurationEditor<WasmPackCommandConfiguration, RsCommandLineEditor>(project) {
 
     override val command = RsCommandLineEditor(
         project, WasmPackCommandCompletionProvider(project.cargoProjects) { currentWorkspace() }
