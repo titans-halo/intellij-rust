@@ -108,7 +108,7 @@ open class CargoCommandConfiguration(
 
     fun setFromCmd(cmd: CargoCommandLine) {
         channel = cmd.channel
-        command = ParametersListUtil.join(cmd.command, *cmd.additionalArguments.toTypedArray())
+        command = ParametersListUtil.join(listOfNotNull(cmd.toolchain, cmd.command, *cmd.additionalArguments.toTypedArray()))
         requiredFeatures = cmd.requiredFeatures
         allFeatures = cmd.allFeatures
         emulateTerminal = cmd.emulateTerminal
@@ -121,7 +121,7 @@ open class CargoCommandConfiguration(
     }
 
     fun canBeFrom(cmd: CargoCommandLine): Boolean =
-        command == ParametersListUtil.join(cmd.command, *cmd.additionalArguments.toTypedArray())
+        command == ParametersListUtil.join(listOfNotNull(cmd.toolchain, cmd.command, *cmd.additionalArguments.toTypedArray()))
 
     @Throws(RuntimeConfigurationException::class)
     override fun checkConfiguration() {
@@ -132,9 +132,14 @@ open class CargoCommandConfiguration(
                 !path.toFile().isFile -> throw RuntimeConfigurationWarning("Input file is not valid")
             }
         }
+
+        val config = clean()
+        if (config is CleanConfiguration.Err) throw config.error
+        config as CleanConfiguration.Ok
+
         // TODO: remove when `com.intellij.execution.process.ElevationService` supports error stream redirection
         // https://github.com/intellij-rust/intellij-rust/issues/7320
-        if (withSudo && showTestToolWindow()) {
+        if (withSudo && showTestToolWindow(config.cmd)) {
             val message = if (SystemInfo.isWindows) {
                 RsBundle.message("notification.run.tests.as.root.windows")
             } else {
@@ -142,9 +147,6 @@ open class CargoCommandConfiguration(
             }
             throw RuntimeConfigurationWarning(message)
         }
-
-        val config = clean()
-        if (config is CleanConfiguration.Err) throw config.error
     }
 
     override fun getConfigurationEditor(): SettingsEditor<out RunConfiguration> =
@@ -152,22 +154,28 @@ open class CargoCommandConfiguration(
 
     override fun getState(executor: Executor, environment: ExecutionEnvironment): RunProfileState? {
         val config = clean().ok ?: return null
-        return if (showTestToolWindow()) {
+        return if (showTestToolWindow(config.cmd)) {
             CargoTestRunState(environment, this, config)
         } else {
             CargoRunState(environment, this, config)
         }
     }
 
-    private fun showTestToolWindow(): Boolean = command.startsWith("test") &&
-        isFeatureEnabled(RsExperiments.TEST_TOOL_WINDOW) &&
-        !Cargo.TEST_NOCAPTURE_ENABLED_KEY.asBoolean() &&
-        !command.contains("--nocapture")
+    private fun showTestToolWindow(commandLine: CargoCommandLine): Boolean =
+        commandLine.command == "test" &&
+            isFeatureEnabled(RsExperiments.TEST_TOOL_WINDOW) &&
+            !Cargo.TEST_NOCAPTURE_ENABLED_KEY.asBoolean() &&
+            "--nocapture" !in commandLine.additionalArguments
 
 
-    override fun createTestConsoleProperties(executor: Executor): SMTRunnerConsoleProperties? =
-        if (showTestToolWindow()) CargoTestConsoleProperties(this, executor) else null
-
+    override fun createTestConsoleProperties(executor: Executor): SMTRunnerConsoleProperties? {
+        val config = clean().ok ?: return null
+        return if (showTestToolWindow(config.cmd)) {
+            CargoTestConsoleProperties(this, executor)
+        } else {
+            null
+        }
+    }
 
     sealed class CleanConfiguration {
         class Ok(
@@ -192,15 +200,17 @@ open class CargoCommandConfiguration(
             ?.let { File(it) }
         val cmd = run {
             val args = ParametersListUtil.parse(command)
-            if (args.isEmpty()) {
-                return CleanConfiguration.error("No command specified")
-            }
+            val command = args.firstOrNull { !it.startsWith("+") }
+                ?: return CleanConfiguration.error("No command specified")
+            val toolchain = args.firstOrNull()?.takeIf { it.startsWith("+") }
+            val additionalArguments = args.drop(args.indexOf(command) + 1)
             CargoCommandLine(
-                args.first(),
+                command,
                 workingDirectory,
-                args.drop(1),
+                additionalArguments,
                 redirectInputFrom,
                 backtrace,
+                toolchain,
                 channel,
                 env,
                 requiredFeatures,

@@ -206,10 +206,10 @@ object CargoBuildManager {
 
     fun isBuildConfiguration(configuration: CargoCommandConfiguration): Boolean {
         val args = ParametersListUtil.parse(configuration.command)
-        return when (val command = args.firstOrNull()) {
+        return when (val command = args.firstOrNull { !it.startsWith("+") }) {
             "build", "check", "clippy" -> true
             "test" -> {
-                val additionalArguments = args.drop(1)
+                val additionalArguments = args.drop(args.indexOf(command) + 1)
                 val (commandArguments, _) = parseArgs(command, additionalArguments)
                 "--no-run" in commandArguments
             }
@@ -221,9 +221,10 @@ object CargoBuildManager {
         if (isBuildConfiguration(configuration)) return configuration
 
         val args = ParametersListUtil.parse(configuration.command)
-        val command = args.firstOrNull() ?: return null
+        val command = args.firstOrNull { !it.startsWith("+") } ?: return null
         if (command !in BUILDABLE_COMMANDS) return null
-        val additionalArguments = args.drop(1)
+        val toolchain = args.firstOrNull()?.takeIf { it.startsWith("+") }
+        val additionalArguments = args.drop(args.indexOf(command) + 1)
         val (commandArguments, _) = parseArgs(command, additionalArguments)
 
         // https://github.com/intellij-rust/intellij-rust/issues/3707
@@ -231,11 +232,11 @@ object CargoBuildManager {
 
         val buildConfiguration = configuration.clone() as CargoCommandConfiguration
         buildConfiguration.name = "Build `${buildConfiguration.name}`"
-        buildConfiguration.command = when (command) {
-            "run" -> ParametersListUtil.join("build", *commandArguments.toTypedArray())
-            "test" -> ParametersListUtil.join("test", "--no-run", *commandArguments.toTypedArray())
+        buildConfiguration.command = ParametersListUtil.join(when (command) {
+            "run" -> listOfNotNull(toolchain, "build", *commandArguments.toTypedArray())
+            "test" -> listOfNotNull(toolchain, "test", "--no-run", *commandArguments.toTypedArray())
             else -> return null
-        }
+        })
         // building does not require root privileges anyway
         buildConfiguration.withSudo = false
 
