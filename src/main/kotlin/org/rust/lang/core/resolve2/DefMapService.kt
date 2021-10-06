@@ -36,6 +36,8 @@ import org.rust.stdext.mapToSet
 import java.nio.file.Path
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.ConcurrentMap
+import java.util.concurrent.ExecutorService
+import java.util.concurrent.Executors
 import java.util.concurrent.atomic.AtomicLong
 import java.util.concurrent.locks.ReentrantLock
 
@@ -138,6 +140,7 @@ class DefMapService(val project: Project) : Disposable {
      */
     private val defMaps: ConcurrentMap<CratePersistentId, DefMapHolder> = ContainerUtil.createConcurrentSoftValueMap()
     val defMapsBuildLock: ReentrantLock = ReentrantLock()
+    val fixedThreadPool: ExecutorService = Executors.newFixedThreadPool(1)
 
     private val fileIdToCrateId: MultiMap<FileId, CratePersistentId> = MultiMap.createConcurrent()
 
@@ -275,7 +278,9 @@ class DefMapService(val project: Project) : Disposable {
         GCWatcher.tracking(defMaps.values).ensureCollected()
     }
 
-    override fun dispose() {}
+    override fun dispose() {
+        fixedThreadPool.shutdown()
+    }
 
     private inner class DefMapPsiTreeChangeListener : RsPsiTreeChangeAdapter() {
         override fun handleEvent(event: RsPsiTreeChangeEvent) {

@@ -10,10 +10,7 @@ import com.intellij.openapi.progress.ProgressIndicator
 import org.rust.lang.core.crate.Crate
 import org.rust.openapiext.computeInReadActionWithWriteActionPriority
 import org.rust.stdext.getWithRethrow
-import java.util.concurrent.CompletableFuture
-import java.util.concurrent.ConcurrentHashMap
-import java.util.concurrent.CountDownLatch
-import java.util.concurrent.ExecutorService
+import java.util.concurrent.*
 import java.util.concurrent.atomic.AtomicInteger
 import kotlin.system.measureTimeMillis
 
@@ -74,6 +71,18 @@ class DefMapsBuilder(
     }
 
     private fun buildSync() {
+        if (poolForMacros == null) {
+            doBuildSync()
+        } else {
+            invokeWithoutHelpingOtherForkJoinPools(defMapService.fixedThreadPool, poolForMacros) {
+                computeInReadActionWithWriteActionPriority(SensitiveProgressWrapper(indicator)) {
+                    doBuildSync()
+                }
+            }
+        }
+    }
+
+    private fun doBuildSync() {
         for (crate in crates) {
             tasksTimes[crate] = measureTimeMillis {
                 doBuildDefMap(crate)
@@ -150,4 +159,44 @@ class DefMapsBuilder(
             RESOLVE_LOG.debug("wallTime: $wallTime.    Top 5 crates: $top5crates")
         }
     }
+}
+
+/**
+ * Needed because of [DefCollector.expandMacrosInParallel].
+ * We use [ForkJoinPool.invokeAll] there, which can execute tasks
+ * from completely different thread pool (associated with current thread).
+ * That's why we need to be sure that we build DefMaps on "fresh" thread.
+ * Also see [org.rust.lang.core.macros.MacroExpansionServiceImplInner.pool].
+ */
+private fun invokeWithoutHelpingOtherForkJoinPools(
+    fixedThreadPool: ExecutorService,
+    forkJoinPool: ExecutorService,
+    action: () -> Unit
+) {
+    /** Current thread is [ForkJoinWorkerThread]. */
+    check(fixedThreadPool !is ForkJoinPool)
+    fixedThreadPool.submit {
+        /** Now we are not in [ForkJoinWorkerThread]. */
+        val future = CompletableFuture<Unit>()
+        forkJoinPool.submit {
+            try {
+                action()
+                future.complete(Unit)
+            } catch (e: Throwable) {
+                future.completeExceptionally(e)
+            }
+        }
+        /**
+         * Waiting on [ForkJoinTask] will try to help either current thread or [ForkJoinPool.common].
+         *   ⇒ so we can't use `.submit { ... }.getWithRethrow()`
+         * Waiting on [CompletableFuture] will try to help only current thread.
+         *   ⇒ so we use it.
+         */
+        future.getWithRethrow()
+    }
+        /**
+         * This [getWithRethrow] will not help any [ForkJoinPool]
+         * because [fixedThreadPool] is usual [ThreadPoolExecutor].
+         */
+        .getWithRethrow()
 }
