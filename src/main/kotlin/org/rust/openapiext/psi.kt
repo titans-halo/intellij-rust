@@ -12,8 +12,12 @@ import com.intellij.psi.impl.source.tree.CompositeElement
 import com.intellij.psi.search.PsiElementProcessor
 import com.intellij.psi.util.PsiTreeUtil
 import com.intellij.util.containers.ContainerUtil
+import org.rust.lang.core.psi.ProcMacroAttribute
 import org.rust.lang.core.psi.RsMacroCall
-import org.rust.lang.core.psi.ext.*
+import org.rust.lang.core.psi.ext.RsAttrProcMacroOwner
+import org.rust.lang.core.psi.ext.RsPossibleMacroCall
+import org.rust.lang.core.psi.ext.expansion
+import org.rust.lang.core.psi.ext.macroName
 import org.rust.lang.core.resolve.DEFAULT_RECURSION_LIMIT
 import org.rust.stdext.exhaustive
 
@@ -101,6 +105,8 @@ private class RsWithMacrosRecursiveElementWalkingVisitor(
         private set
 
     override fun visitElement(element: PsiElement) {
+        if (tryProcessAttrProcMacro(element)) return
+
         when (processor.execute(element)) {
             TreeStatus.VISIT_CHILDREN -> {
                 if (element is RsMacroCall && shouldExpandMacro(element)) {
@@ -137,12 +143,19 @@ private class RsWithMacrosRecursiveElementWalkingVisitor(
         }
     }
 
+    private fun tryProcessAttrProcMacro(element: PsiElement): Boolean {
+        if (element !is RsAttrProcMacroOwner) return false
+        val attr = element.procMacroAttributeWithDerives as? ProcMacroAttribute.Attr ?: return false
+        super.visitElement(attr.attr)
+        processMacro(attr.attr)
+        return true
+    }
+
     private fun tryProcessDeriveProcMacro(element: PsiElement) {
-        if (element !is RsStructOrEnumItemElement) return
-        for (deriveMetaItem in element.deriveMetaItems) {
-            if (deriveMetaItem.canBeMacroCall) {
-                processMacro(deriveMetaItem)
-            }
+        if (element !is RsAttrProcMacroOwner) return
+        val attr = element.procMacroAttributeWithDerives as? ProcMacroAttribute.Derive ?: return
+        for (derive in attr.derives) {
+            processMacro(derive)
         }
     }
 }
