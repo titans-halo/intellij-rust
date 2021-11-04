@@ -108,6 +108,11 @@ class RsDebugProcessConfigurationHelper(
                 val sysroot = checkSysroot(sysroot, "Cannot load rustc renderers") ?: return
                 val basePath = "$sysroot/lib/rustlib/etc"
 
+                // MSVC toolchain does not contain Python pretty-printers (only Natvis files)
+                if ("windows-msvc" in basePath) {
+                    return
+                }
+
                 // BACKCOMPAT: Rust 1.45. Drop the first branch
                 if (rustcVersion != null && rustcVersion < RUST_1_46) {
                     val lldbRustFormattersPath = "$basePath/lldb_rust_formatters.py".systemDependentAndEscaped()
