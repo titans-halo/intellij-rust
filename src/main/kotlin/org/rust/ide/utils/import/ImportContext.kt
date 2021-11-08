@@ -58,14 +58,15 @@ class ImportContext2 private constructor(
     val rootModData: ModData,
     /** DefMap of [rootModData] */
     val rootDefMap: CrateDefMap,
+    val type: Type,
 
     val pathInfo: PathInfo?,
 ) {
     companion object {
-        fun from(path: RsPath, isCompletion: Boolean): ImportContext2? =
-            from(path, PathInfo.from(path, isCompletion))
+        fun from(path: RsPath, type: Type = Type.AUTO_IMPORT): ImportContext2? =
+            from(path, type, PathInfo.from(path, type == Type.COMPLETION))
 
-        fun from(context: RsElement, pathInfo: PathInfo? = null): ImportContext2? {
+        fun from(context: RsElement, type: Type = Type.AUTO_IMPORT, pathInfo: PathInfo? = null): ImportContext2? {
             val rootMod = context.containingMod
             val info = getModInfo(rootMod) as? RsModInfoBase.RsModInfo ?: return null
             return ImportContext2(
@@ -73,9 +74,16 @@ class ImportContext2 private constructor(
                 rootMod = rootMod,
                 rootModData = info.modData,
                 rootDefMap = info.defMap,
+                type = type,
                 pathInfo = pathInfo,
             )
         }
+    }
+
+    enum class Type {
+        AUTO_IMPORT,
+        COMPLETION,
+        OTHER,
     }
 
     class PathInfo(
