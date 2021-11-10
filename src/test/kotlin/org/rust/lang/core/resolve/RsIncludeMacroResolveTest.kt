@@ -8,6 +8,7 @@ package org.rust.lang.core.resolve
 import org.intellij.lang.annotations.Language
 import org.rust.ExpandMacros
 import org.rust.MockEdition
+import org.rust.UseOldResolve
 import org.rust.cargo.project.workspace.CargoWorkspace
 
 class RsIncludeMacroResolveTest : RsResolveTestBase() {
@@ -101,6 +102,7 @@ class RsIncludeMacroResolveTest : RsResolveTestBase() {
                   //^ lib.rs
     """)
 
+    @UseOldResolve
     fun `test include in function local module`() = checkResolve("""
     //- lib.rs
         fn foo() {

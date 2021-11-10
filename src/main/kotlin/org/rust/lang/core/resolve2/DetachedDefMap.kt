@@ -13,6 +13,7 @@ import org.rust.lang.core.crate.Crate
 import org.rust.lang.core.crate.impl.FakeDetachedCrate
 import org.rust.lang.core.psi.RsFile
 import org.rust.lang.core.psi.RsModItem
+import org.rust.lang.core.psi.ext.RsItemsOwner
 import org.rust.lang.core.psi.ext.RsMod
 import org.rust.lang.core.psi.ext.getChildModule
 import org.rust.openapiext.getCachedOrCompute
@@ -34,7 +35,7 @@ private class DetachedFileDataPsiHelper(
     private val root: RsFile,
     private val defMap: CrateDefMap
 ) : DataPsiHelper {
-    override fun psiToData(scope: RsMod): ModData? {
+    override fun psiToData(scope: RsItemsOwner): ModData? {
         return when {
             scope.containingFile != root -> null
             scope == root -> defMap.root

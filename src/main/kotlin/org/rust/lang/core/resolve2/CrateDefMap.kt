@@ -5,7 +5,6 @@
 
 package org.rust.lang.core.resolve2
 
-import com.google.common.annotations.VisibleForTesting
 import com.intellij.openapi.diagnostic.Logger
 import com.intellij.openapi.editor.Document
 import com.intellij.openapi.vfs.VfsUtil
@@ -18,18 +17,14 @@ import com.intellij.util.containers.map2Array
 import gnu.trove.THashMap
 import org.rust.cargo.project.workspace.CargoWorkspace.Edition
 import org.rust.lang.core.crate.CratePersistentId
-import org.rust.lang.core.psi.RsEnumVariant
-import org.rust.lang.core.psi.RsFile
-import org.rust.lang.core.psi.RsProcMacroKind
+import org.rust.lang.core.psi.*
 import org.rust.lang.core.psi.ext.RsMod
-import org.rust.lang.core.psi.getHardcodeProcMacroProperties
 import org.rust.lang.core.resolve.Namespace
 import org.rust.lang.core.resolve2.Visibility.*
 import org.rust.lang.core.resolve2.util.GlobImportGraph
 import org.rust.lang.core.resolve2.util.PerNsHashMap
 import org.rust.lang.core.resolve2.util.SmartListMap
 import org.rust.openapiext.fileId
-import org.rust.openapiext.testAssert
 import org.rust.stdext.HashCode
 import org.rust.stdext.writeVarInt
 import java.io.DataOutput
@@ -78,7 +73,6 @@ class CrateDefMap(
      */
     val missedFiles: MutableList<Path> = mutableListOf()
 
-    @VisibleForTesting
     val timestamp: Long = System.nanoTime()
 
     /** Stored as memory optimization */
@@ -94,14 +88,7 @@ class CrateDefMap(
 
     fun getModData(path: ModPath): ModData? {
         val defMap = getDefMap(path.crate) ?: error("Can't find ModData for path $path")
-        return defMap.doGetModData(path)
-    }
-
-    private fun doGetModData(path: ModPath): ModData? {
-        check(crate == path.crate)
-        return path.segments
-            .fold(root as ModData?) { modData, segment -> modData?.childModules?.get(segment) }
-            .also { testAssert({ it != null }, { "Can't find ModData for $path in crate $crateDescription" }) }
+        return defMap.root.getChildModData(path.segments)
     }
 
     // TODO: Possible optimization - store in [CrateDefMap] map from [String] (mod path) to [ModData]
@@ -122,13 +109,13 @@ class CrateDefMap(
         return parentModData.childModules[mod.modName]
     }
 
-    fun getMacroInfo(macroDef: VisItem): MacroDefInfo {
-        val defMap = getDefMap(macroDef.crate) ?: error("Can't find DefMap for macro $macroDef")
+    fun getMacroInfo(macroDef: VisItem): MacroDefInfo? {
+        val defMap = getDefMap(macroDef.crate) ?: return null
         return defMap.doGetMacroInfo(macroDef)
     }
 
-    private fun doGetMacroInfo(macroDef: VisItem): MacroDefInfo {
-        val containingMod = getModData(macroDef.containingMod) ?: error("Can't find ModData for macro $macroDef")
+    private fun doGetMacroInfo(macroDef: VisItem): MacroDefInfo? {
+        val containingMod = getModData(macroDef.containingMod) ?: return null
         val procMacroKind = containingMod.procMacros[macroDef.name]
         if (procMacroKind != null) {
             val knownKind = getHardcodeProcMacroProperties(metaData.name, macroDef.name)
@@ -274,6 +261,8 @@ class ModData(
     val isEnum: Boolean = false,
     /** Normal cargo crate with physical crate root, etc */
     val isNormalCrate: Boolean = true,
+    /** not-null when `this` corresponds to [RsBlock]. See [getHangingModInfo] */
+    val context: ModData? = null,
     /** Only for debug */
     val crateDescription: String,
 ) {
@@ -336,6 +325,8 @@ class ModData(
             else -> parent.hasPathAttributeRelativeToParentFile || hasPathAttribute
         }
 
+    val timestamp: Long = System.nanoTime()
+
     fun getVisibleItem(name: String): PerNs = visibleItems.getOrDefault(name, PerNs.Empty)
 
     fun getVisibleItems(filterVisibility: (Visibility) -> Boolean): List<Pair<String, PerNs>> {
@@ -362,7 +353,12 @@ class ModData(
         return asVisItem
     }
 
-    fun asPerNs(): PerNs = PerNs.types(asVisItem())
+    fun asPerNs(): PerNs = context?.asPerNs() ?: PerNs.types(asVisItem())
+
+    fun getChildModData(relativePath: Array<String>): ModData? =
+        relativePath.fold(this as ModData?) { modData, segment ->
+            modData?.childModules?.get(segment)
+        }
 
     fun getNthParent(n: Int): ModData? {
         check(n >= 0)

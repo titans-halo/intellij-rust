@@ -70,12 +70,14 @@ class RsFileStub(
     override fun getType() = Type
 
     object Type : IStubFileElementType<RsFileStub>(RsLanguage) {
-        private const val STUB_VERSION = 221
+        private const val STUB_VERSION = 222
 
         // Bump this number if Stub structure changes
         override fun getStubVersion(): Int = RustParserDefinition.PARSER_VERSION + STUB_VERSION
 
-        override fun getBuilder(): StubBuilder = object : DefaultStubBuilder() {
+        override fun getBuilder(): StubBuilder = getBuilder(skipChildForFunctionBody = false)
+
+        fun getBuilder(skipChildForFunctionBody: Boolean): StubBuilder = object : DefaultStubBuilder() {
             override fun createStubForFile(file: PsiFile): StubElement<*> {
                 TreeUtil.ensureParsed(file.node) // profiler hint
 
@@ -101,7 +103,7 @@ class RsFileStub(
 
             /** Note: if returns `true` then [RsBlockStubType.shouldCreateStub] MUST return `false` for the [child] */
             private fun skipChildForFunctionBody(child: ASTNode): Boolean =
-                !BlockMayHaveStubsHeuristic.getAndClearCached(child)
+                skipChildForFunctionBody && !BlockMayHaveStubsHeuristic.getAndClearCached(child)
         }
 
         override fun serialize(stub: RsFileStub, dataStream: StubOutputStream) {
@@ -1849,6 +1851,11 @@ class RsBinaryOpStub(
     }
 }
 
+class RsBlockStub(
+    parent: StubElement<*>?, elementType: IStubElementType<*, *>,
+    val lbraceOffset: Int,
+) : StubBase<RsBlock>(parent, elementType)
+
 /**
  * [IReparseableElementTypeBase] and [ICustomParsingType] are implemented to provide lazy and incremental
  *  parsing of function bodies.
@@ -1857,7 +1864,7 @@ class RsBinaryOpStub(
  *  if that makes sense; made just in case)
  * [ILightLazyParseableElementType] is needed to diff trees correctly (see `PsiBuilderImpl.MyComparator`).
  */
-object RsBlockStubType : RsPlaceholderStub.Type<RsBlock>("BLOCK", ::RsBlockImpl),
+object RsBlockStubType : RsStubElementType<RsBlockStub, RsBlock>("BLOCK"),
                          ICustomParsingType,
                          ICompositeElementType,
                          IReparseableElementTypeBase,
@@ -1911,6 +1918,19 @@ object RsBlockStubType : RsPlaceholderStub.Type<RsBlock>("BLOCK", ::RsBlockImpl)
     // Avoid double lexing
     override fun reuseCollapsedTokens(): Boolean = true
 
+    override fun serialize(stub: RsBlockStub, dataStream: StubOutputStream) {
+        dataStream.writeVarInt(stub.lbraceOffset)
+    }
+
+    override fun deserialize(dataStream: StubInputStream, parentStub: StubElement<*>?): RsBlockStub =
+        RsBlockStub(parentStub, this, dataStream.readVarInt())
+
+    override fun createStub(psi: RsBlock, parentStub: StubElement<*>?): RsBlockStub =
+        RsBlockStub(parentStub, this, psi.lbrace.startOffset)
+
+    override fun createPsi(stub: RsBlockStub): RsBlock =
+        RsBlockImpl(stub, this)
+
     private class BlockVisitor private constructor() : RecursiveTreeElementWalkingVisitor() {
         private var hasItemsOrAttrs = false
 
@@ -1934,7 +1954,7 @@ object RsBlockStubType : RsPlaceholderStub.Type<RsBlock>("BLOCK", ::RsBlockImpl)
     }
 
     private object Holder {
-        val RS_ITEMS_AND_INNER_ATTR = TokenSet.orSet(RS_ITEMS, tokenSetOf(MACRO, INNER_ATTR))
+        val RS_ITEMS_AND_INNER_ATTR = TokenSet.orSet(RS_ITEMS, tokenSetOf(MACRO, MACRO_CALL, INNER_ATTR))
     }
 }
 

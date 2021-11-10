@@ -581,18 +581,6 @@ class RsPackageLibraryResolveTest : RsResolveTestBase() {
     """)
 
     @MockEdition(CargoWorkspace.Edition.EDITION_2018)
-    fun `test macro 2 (inside function body)`() = expect<IllegalStateException> {
-        stubOnlyResolve("""
-        //- lib.rs
-            fn main() {
-                foo!();
-                //^ lib.rs
-                pub macro foo() {}
-            }           //X
-        """)
-    }
-
-    @MockEdition(CargoWorkspace.Edition.EDITION_2018)
     fun `test macro 2 (import)`() = stubOnlyResolve("""
     //- main.rs
         use test_package::foo;
