@@ -1012,6 +1012,10 @@
                     factoryClass="org.rust.cargo.project.toolwindow.CargoToolWindowFactory"
                     icon="/icons/tool-window.svg"/>
 
+        <statusBarWidgetFactory id="rustExternalLinterWidget"
+                                implementation="org.rust.ide.status.RsExternalLinterWidgetFactory"
+                                order="first"/>
+
         <additionalLibraryRootsProvider
                 implementation="org.rust.cargo.project.workspace.RsAdditionalLibraryRootsProvider"/>
 
