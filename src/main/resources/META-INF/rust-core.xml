@@ -1009,6 +1009,8 @@
 
         <projectService serviceImplementation="org.rust.ide.notifications.RsExternalLinterTooltipService"/>
 
+        <projectService serviceImplementation="org.rust.ide.notifications.RsExternalLinterSlowRunNotifier"/>
+
         <toolWindow id="Cargo"
                     anchor="right"
                     factoryClass="org.rust.cargo.project.toolwindow.CargoToolWindowFactory"
@@ -1158,6 +1160,8 @@
                      description="Expand macros in parallel"/>
         <registryKey key="org.rust.auto.import.using.new.resolve" defaultValue="true" restartRequired="false"
                      description="Use new name resolution engine for auto import"/>
+        <registryKey key="org.rust.external.linter.max.duration" defaultValue="3000" restartRequired="false"
+                     description="Show notification warning if the external linter is running longer than the set value (ms)"/>
 
         <!-- Move refactoring -->
 

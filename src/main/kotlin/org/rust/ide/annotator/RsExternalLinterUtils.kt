@@ -133,6 +133,7 @@ object RsExternalLinterUtils {
         args: CargoCheckArgs
     ): RsExternalLinterResult? {
         ProgressManager.checkCanceled()
+        val started = Instant.now()
         val output = try {
             toolchain
                 .cargoOrWrapper(workingDirectory)
@@ -141,9 +142,10 @@ object RsExternalLinterUtils {
             LOG.error(e)
             return null
         }
+        val finish = Instant.now()
         ProgressManager.checkCanceled()
         if (output.isCancelled) return null
-        return RsExternalLinterResult(output.stdoutLines)
+        return RsExternalLinterResult(output.stdoutLines, Duration.between(started, finish).toMillis())
     }
 
     private data class Key(
@@ -198,7 +200,7 @@ fun AnnotationHolder.createAnnotationsForFile(file: RsFile, annotationResult: Rs
     }
 }
 
-class RsExternalLinterResult(commandOutput: List<String>) {
+class RsExternalLinterResult(commandOutput: List<String>, val executionTime: Long) {
     val messages: List<CargoTopMessage> = commandOutput.asSequence()
         .filter { MESSAGE_REGEX.matches(it) }
         .mapNotNull { tryParseJsonObject(it) }
