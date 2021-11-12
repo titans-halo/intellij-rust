@@ -988,6 +988,11 @@
                              parentId="language.rust"
                              id="language.rust.cargo"/>
 
+        <projectConfigurable instance="org.rust.cargo.project.configurable.RsExternalLinterConfigurable"
+                             displayName="Linters"
+                             parentId="language.rust"
+                             id="language.rust.cargo.check"/>
+
         <projectConfigurable instance="org.rust.cargo.project.configurable.RustfmtConfigurable"
                              displayName="Rustfmt"
                              parentId="language.rust"
