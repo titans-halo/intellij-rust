@@ -5,6 +5,7 @@
 
 package org.rust.ide.status
 
+import com.intellij.openapi.components.service
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.util.Disposer
 import com.intellij.openapi.wm.CustomStatusBarWidget
@@ -21,6 +22,7 @@ import org.rust.cargo.project.settings.rustSettings
 import org.rust.cargo.runconfig.hasCargoProject
 import org.rust.cargo.toolchain.ExternalLinter
 import org.rust.ide.icons.RsIcons
+import org.rust.ide.notifications.RsExternalLinterTooltipService
 import org.rust.openapiext.showSettingsDialog
 import java.awt.event.MouseEvent
 import javax.swing.JComponent
@@ -63,6 +65,8 @@ class RsExternalLinterWidget(private val project: Project) : TextPanel.WithIconA
                 }
             }
         })
+
+        project.service<RsExternalLinterTooltipService>().showTooltip(this)
     }
 
     override fun ID(): String = ID
