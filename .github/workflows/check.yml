@@ -20,43 +20,6 @@ concurrency:
     cancel-in-progress: true
 
 jobs:
-    calculate-git-info:
-        runs-on: ubuntu-18.04
-        outputs:
-            is_bors_branch: ${{ steps.calculate-git-info.outputs.is_bors_branch }}
-            is_master_branch: ${{ steps.calculate-git-info.outputs.is_master_branch }}
-            checked: ${{ steps.calculate-git-info.outputs.checked }}
-        steps:
-            - uses: actions/checkout@v2
-              with:
-                  fetch-depth: 0
-
-            - name: Set up Python
-              uses: actions/setup-python@v1
-              with:
-                  python-version: 3.7
-
-            - name: Calculate git info
-              id: calculate-git-info
-              run: |
-                  echo "::set-output name=is_bors_branch::${{ github.ref == 'refs/heads/staging' || github.ref == 'refs/heads/trying' }}"
-                  echo "::set-output name=is_master_branch::${{ github.ref == 'refs/heads/master'}}"
-                  echo "::set-output name=checked::$(python scripts/has_successful_status.py --token ${{ github.token }} --ref ${{ github.sha }} --check_name check)"
-
-            - name: Check git info
-              run: |
-                  echo "is_bors_branch: ${{ steps.calculate-git-info.outputs.is_bors_branch }}"
-                  echo "is_master_branch: ${{ steps.calculate-git-info.outputs.is_master_branch }}"
-                  echo "checked: ${{ steps.calculate-git-info.outputs.checked }}"
-
-    check-license:
-        runs-on: ubuntu-18.04
-        steps:
-            - uses: actions/checkout@v2
-
-            - name: Check license
-              run: ./check-license.sh
-
     build-native-code:
         needs: [ calculate-git-info ]
         # `fromJSON` is used here to convert string output to boolean
@@ -147,7 +110,9 @@ jobs:
 
             - name: Set up WSL 2
               if: matrix.wsl-distribution != null
-              run: C:\hostedtoolcache\windows\Ubuntu\18.4.0\x64\ubuntu1804.exe config --default-user test
+              run: |
+                  ubuntu1804 config --default-user test
+                  wsl --set-version ${{ matrix.wsl-distribution }} 2
 
             - name: Set up WSL Rust
               if: matrix.wsl-distribution != null
