@@ -12,6 +12,7 @@ import org.rust.lang.core.completion.collectVariantsForEnumCompletion
 import org.rust.lang.core.completion.createLookupElement
 import org.rust.lang.core.psi.RsEnumItem
 import org.rust.lang.core.psi.RsFunction
+import org.rust.lang.core.psi.RsPatBinding
 import org.rust.lang.core.psi.RsPath
 import org.rust.lang.core.psi.ext.*
 import org.rust.lang.core.resolve.ref.MethodResolveVariant
@@ -99,6 +100,9 @@ fun collectPathResolveVariants(
 
         if (e.name == referenceName) {
             val element = e.element ?: return@createProcessor false
+            if (result.any { it.inner.element is RsPatBinding } && element !is RsPatBinding) {
+                return@createProcessor false
+            }
             if (element !is RsDocAndAttributeOwner || element.existsAfterExpansionSelf) {
                 val boundElement = BoundElement(element, e.subst)
                 val visibilityStatus = e.getVisibilityStatusFrom(path)
@@ -122,6 +126,9 @@ fun collectResolveVariants(referenceName: String?, f: (RsResolveProcessor) -> Un
 
         if (e.name == referenceName) {
             val element = e.element ?: return@createProcessor false
+            if (result.any { it is RsPatBinding } && element !is RsPatBinding) {
+                return@createProcessor false
+            }
             if (element !is RsDocAndAttributeOwner || element.existsAfterExpansionSelf) {
                 result += element
             }
@@ -146,6 +153,9 @@ fun <T : ScopeEntry> collectResolveVariantsAsScopeEntries(
         if (e.name == referenceName) {
             // de-lazying. See `RsResolveProcessor.lazy`
             val element = e.element ?: return@createProcessorGeneric false
+            if (result.any { it.element is RsPatBinding } && element !is RsPatBinding) {
+                return@createProcessorGeneric false
+            }
             if (element !is RsDocAndAttributeOwner || element.existsAfterExpansionSelf) {
                 result += e
             }
