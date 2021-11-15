@@ -151,15 +151,11 @@ jobs:
 
             - name: Set up WSL Rust
               if: matrix.wsl-distribution != null
-              run: |
-                  wsl curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs -o ~/rustup.sh
-                  wsl chmod +x ~/rustup.sh
-                  wsl ~/rustup.sh -y --default-toolchain ${{ matrix.rust-version }} --profile minimal -c rust-src rustfmt clippy
-                  wsl source $HOME/.cargo/env
-                  wsl rustup install --profile minimal nightly
-                  wsl rustup +nightly component add rust-src
-                  wsl which rustup
-                  wsl which cargo
+              shell: wsl-bash {0}
+              run: curl https://sh.rustup.rs -sSf | sh -s --  -y --profile minimal --default-toolchain ${{ matrix.rust-version }} -c rust-src rustfmt clippy
+#                  source $HOME/.cargo/env
+#                  rustup install --profile minimal nightly
+#                  rustup +nightly component add rust-src
 
             - name: Cache cargo binaries
               uses: actions/cache@v2
