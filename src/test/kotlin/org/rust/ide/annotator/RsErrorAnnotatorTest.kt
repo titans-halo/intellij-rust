@@ -9,6 +9,8 @@ import org.rust.*
 import org.rust.cargo.project.workspace.CargoWorkspace
 import org.rust.ide.experiments.RsExperiments
 import org.rust.lang.core.macros.MacroExpansionScope
+import org.rust.lang.core.psi.RsDebuggerExpressionCodeFragment
+import org.rust.lang.core.psi.RsExpressionCodeFragment
 
 class RsErrorAnnotatorTest : RsAnnotatorTestBase(RsErrorAnnotator::class) {
 
@@ -4427,4 +4429,30 @@ class RsErrorAnnotatorTest : RsAnnotatorTestBase(RsErrorAnnotator::class) {
             name: &'async str,
         }
     """)
+
+    fun `test do not annotate usage of private field in debugger code fragment`() = checkByCodeFragment("""
+        mod my {
+            pub struct Foo { inner: i32 }
+        }
+        fn bar(foo: my::Foo) {
+            /*caret*/;
+        }
+    """, """foo.inner""", ::RsDebuggerExpressionCodeFragment)
+
+    @ProjectDescriptor(WithStdlibRustProjectDescriptor::class)
+    fun `test do not annotate usage of Vec private field in debugger code fragment`() = checkByCodeFragment("""
+        fn main() {
+            let xs = vec![1,2,3];
+            /*caret*/;
+        }
+    """, """xs.inner""", ::RsDebuggerExpressionCodeFragment)
+
+    fun `test annotate usage of private field in expr code fragment`() = checkByCodeFragment("""
+        mod my {
+            pub struct Foo { inner: i32 }
+        }
+        fn bar(foo: my::Foo) {
+            /*caret*/;
+        }
+    """, """foo.<error descr="Field `inner` of struct `my::Foo` is private [E0616]">inner</error>""", ::RsExpressionCodeFragment)
 }
