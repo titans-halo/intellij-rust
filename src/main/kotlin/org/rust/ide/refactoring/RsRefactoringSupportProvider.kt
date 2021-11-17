@@ -33,5 +33,7 @@ class RsRefactoringSupportProvider : RefactoringSupportProvider() {
 
     override fun getIntroduceParameterHandler(): RefactoringActionHandler = RsIntroduceParameterHandler()
 
+    override fun getExtractInterfaceHandler(): RefactoringActionHandler = RsExtractTraitHandler()
+
     override fun getChangeSignatureHandler(): ChangeSignatureHandler = RsChangeSignatureHandler()
 }
