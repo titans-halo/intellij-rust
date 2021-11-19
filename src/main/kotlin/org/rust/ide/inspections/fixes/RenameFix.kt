@@ -12,6 +12,7 @@ import com.intellij.psi.PsiElement
 import com.intellij.psi.PsiFile
 import com.intellij.psi.PsiNamedElement
 import com.intellij.refactoring.RefactoringFactory
+import org.rust.lang.core.psi.RsModDeclItem
 
 /**
  * Fix that renames the given element.
@@ -29,6 +30,7 @@ class RenameFix(
 
     override fun invoke(project: Project, file: PsiFile, startElement: PsiElement, endElement: PsiElement) =
         invokeLater {
-            RefactoringFactory.getInstance(project).createRename(startElement, newName).run()
+            val element = (startElement as? RsModDeclItem)?.reference?.resolve() ?: startElement
+            RefactoringFactory.getInstance(project).createRename(element, newName).run()
         }
 }
