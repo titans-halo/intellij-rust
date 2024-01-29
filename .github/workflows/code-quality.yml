@@ -19,7 +19,7 @@ jobs:
                   java-version: 17
 
             - name: Download
-              uses: gradle/gradle-build-action@v2
+              uses: gradle/gradle-build-action@v3
               with:
                   arguments: ":resolveDependencies -Pkotlin.incremental=false --no-daemon"
                   gradle-home-cache-excludes: |
@@ -27,7 +27,7 @@ jobs:
                       caches/modules-2/files-2.1/com.jetbrains.intellij.clion
 
             - name: Generate sources
-              uses: gradle/gradle-build-action@v2
+              uses: gradle/gradle-build-action@v3
               with:
                   arguments: ":generateLexer :generateParser debugger:generateGrammarSource -Pkotlin.incremental=false --no-daemon"
                   gradle-home-cache-excludes: |
